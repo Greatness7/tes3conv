@@ -1,0 +1,45 @@
+name: build-windows
+on:
+  push:
+    tags:
+      - "windows-[0-9]+.[0-9]+.[0-9]+"
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          submodules: true
+
+      - name: get toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+
+      - name: build release
+        uses: actions-rs/cargo@v1
+        with:
+          toolchain: nightly
+          command: build
+          args: --release
+
+      - name: create release
+        id: create_release
+        uses: actions/create-release@v1.1.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+
+      - name: upload binary
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./target/release/tes3conv.exe
+          asset_name: tes3conv.exe
+          asset_content_type: application/executable
