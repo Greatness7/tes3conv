@@ -25,6 +25,9 @@ jobs:
           command: build
           args: --release
 
+      - name: package release
+        run: tar -pczf tes3conv.tar.gz ./target/release/tes3conv
+
       - name: create release
         id: create_release
         uses: actions/create-release@v1.1.4
@@ -40,6 +43,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./target/release/tes3conv
-          asset_name: tes3conv
-          asset_content_type: application/executable
+          asset_path: tes3conv.tar.gz
+          asset_name: tes3conv.tar.gz
+          asset_content_type: application/gzip
