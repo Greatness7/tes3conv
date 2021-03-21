@@ -1,5 +1,7 @@
 # tes3conv
 
+Get the latest version from the [releases](https://github.com/Greatness7/tes3conv/releases) page.
+
 A simple command-line tool that lets you convert TES3 plugin files (`.esp`) into JSON files (`.json`), and vice-versa.
 
 ```
@@ -21,7 +23,7 @@ ARGS:
 
 ---
 
-The primary motivation for this tool is to enabled TES3 projects to better make use of version control systems like `Git`. To enable automatic git integration you will have to some additional setup, as detailed below.
+The primary motivation for this tool is to enabled TES3 projects to better make use of version control systems like `Git`. To enable automatic git integration you will have to do some additional setup, as detailed below.
 
 
 **Git Integration Instructions: (Windows)**
