@@ -26,7 +26,7 @@ jobs:
           args: --release
 
       - name: package release
-        run: tar -pczf tes3conv.tar.gz -C ./target/release/tes3conv
+        run: tar -pczf tes3conv.tar.gz -C ./target/release/ tes3conv
 
       - name: create release
         id: create_release

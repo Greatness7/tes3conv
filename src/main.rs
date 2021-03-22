@@ -11,7 +11,7 @@ use es3::esp::Plugin;
 
 fn main() -> io::Result<()> {
     let args = App::new("tes3conv")
-        .version("0.0.1")
+        .version("0.0.2")
         .usage("tes3conv \"test.esp\" \"test.json\"")
         .args(&[
             Arg::with_name("MINIMIZE")
@@ -69,7 +69,7 @@ fn validate_output_arg(arg: &OsStr) -> Result<(), OsString> {
 /// Verify that the given path has a JSON or TES3 extension.
 fn validate_extension(path: &Path) -> Result<(), OsString> {
     let ext = path.extension().unwrap_or_default().to_ascii_lowercase();
-    if ext != "esp" && ext != "esm" && ext != "json" {
+    if ext != "esp" && ext != "esm" && ext != "json" && ext != "omwaddon" {
         return Err(format!("\"{}\" (invalid file type).", path.display()).into());
     }
     Ok(())
@@ -127,7 +127,7 @@ fn convert(input: &Path, output: &Path, minimize: bool, overwrite: bool) -> io::
     }
 
     let ext = output.extension().unwrap_or_default().to_ascii_lowercase();
-    if ext == "esp" || ext == "esm" {
+    if ext == "esp" || ext == "esm" || ext == "omwaddon" {
         return plugin.save_path(output);
     }
 
