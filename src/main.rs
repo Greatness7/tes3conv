@@ -27,11 +27,12 @@ fn main() -> io::Result<()> {
                 .short("o")
                 .takes_value(false),
             Arg::with_name("INPUT")
-                .help("Sets the input file. Pass \"\" to use stdin.")
-                .validator_os(validate_input_arg),
+                .help("Sets the input file. Pass - to use stdin.")
+                .validator_os(validate_input_arg)
+                .required(true),
             Arg::with_name("OUTPUT")
-                .help("Sets the output file. Pass \"\" to use stdout.")
-                .validator_os(validate_output_arg),
+                .help("Sets the output file. Omit to use stdout.")
+                .validator_os(validate_output_arg)
         ])
         .setting(AppSettings::ArgRequiredElseHelp)
         .get_matches();
@@ -41,7 +42,7 @@ fn main() -> io::Result<()> {
     let overwrite = args.is_present("OVERWRITE");
 
     // required args
-    let input = args.value_of_os("INPUT").unwrap_or_default().as_ref();
+    let input = args.value_of_os("INPUT").unwrap().as_ref();
     let output = args.value_of_os("OUTPUT").unwrap_or_default().as_ref();
 
     // do conversion
@@ -86,7 +87,7 @@ fn convert(input: &Path, output: &Path, minimize: bool, overwrite: bool) -> io::
 fn parse(path: &Path) -> io::Result<Plugin> {
     let mut raw_data = vec![];
 
-    if path.as_os_str().is_empty() {
+    if path.as_os_str() == "-" {
         io::stdin().read_to_end(&mut raw_data)?;
     } else {
         File::open(path)?.read_to_end(&mut raw_data)?;
@@ -123,9 +124,9 @@ fn backup(path: &Path) -> io::Result<u64> {
     Err(io::Error::new(io::ErrorKind::Other, "Failed to create backup."))
 }
 
-/// Input can either be empty (to use stdin) or a JSON/TES3 file.
+/// Input can either be "-" (to use stdin) or a JSON/TES3 file.
 fn validate_input_arg(arg: &OsStr) -> Result<(), OsString> {
-    if !arg.is_empty() {
+    if arg != "-" {
         let path = arg.as_ref();
         validate_extension(path)?;
         if !path.exists() {
