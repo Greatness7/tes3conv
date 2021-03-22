@@ -11,7 +11,7 @@ use es3::esp::Plugin;
 
 fn main() -> io::Result<()> {
     let args = App::new("tes3conv")
-        .version("0.0.2")
+        .version("0.0.3")
         .usage("tes3conv \"test.esp\" \"test.json\"")
         .args(&[
             Arg::with_name("MINIMIZE")
