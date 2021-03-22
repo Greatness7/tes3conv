@@ -6,12 +6,14 @@ use std::io::{self, Read, Write};
 use std::{fs::File, path::Path};
 
 // external imports
+use clap::{crate_name, crate_version};
 use clap::{App, AppSettings, Arg};
 use es3::esp::Plugin;
 
 fn main() -> io::Result<()> {
-    let args = App::new("tes3conv")
-        .version("0.0.4")
+    let args = App::new(crate_name!())
+        .version(crate_version!())
+        .about("Convert TES3 plugins (.esp) into JSON files (.json), and vice-versa.")
         .usage("tes3conv \"test.esp\" \"test.json\"")
         .args(&[
             Arg::with_name("MINIMIZE")
@@ -25,10 +27,10 @@ fn main() -> io::Result<()> {
                 .short("o")
                 .takes_value(false),
             Arg::with_name("INPUT")
-                .help("Sets the input file. Omit to use stdin.")
+                .help("Sets the input file. Pass \"\" to use stdin.")
                 .validator_os(validate_input_arg),
             Arg::with_name("OUTPUT")
-                .help("Sets the output file. Omit to use stdout.")
+                .help("Sets the output file. Pass \"\" to use stdout.")
                 .validator_os(validate_output_arg),
         ])
         .setting(AppSettings::ArgRequiredElseHelp)
@@ -39,40 +41,44 @@ fn main() -> io::Result<()> {
     let overwrite = args.is_present("OVERWRITE");
 
     // required args
-    let input = args.value_of_os("INPUT").unwrap_or_default();
-    let output = args.value_of_os("OUTPUT").unwrap_or_default();
+    let input = args.value_of_os("INPUT").unwrap_or_default().as_ref();
+    let output = args.value_of_os("OUTPUT").unwrap_or_default().as_ref();
 
     // do conversion
-    convert(input.as_ref(), output.as_ref(), minimize, overwrite)
+    convert(input, output, minimize, overwrite)
 }
 
-/// Input can either be empty (to use stdin) or a JSON/TES3 file.
-fn validate_input_arg(arg: &OsStr) -> Result<(), OsString> {
-    if !arg.is_empty() {
-        validate_output_arg(arg)?;
-        let path = Path::new(arg);
-        if !path.exists() {
-            return Err(format!("\"{}\" (file does not exist).", path.display()).into());
-        }
-    }
-    Ok(())
-}
+/// Convert the contents of input and write to output.
+/// The output format is inferred from the file extension.
+fn convert(input: &Path, output: &Path, minimize: bool, overwrite: bool) -> io::Result<()> {
+    let mut plugin = parse(input)?;
 
-/// Output can either be empty (to use stdout) or a JSON/TES3 file.
-fn validate_output_arg(arg: &OsStr) -> Result<(), OsString> {
-    if !arg.is_empty() {
-        validate_extension(arg.as_ref())?;
+    // create backups unless explicitly told not to
+    if !overwrite && output.exists() {
+        backup(output)?;
     }
-    Ok(())
-}
 
-/// Verify that the given path has a JSON or TES3 extension.
-fn validate_extension(path: &Path) -> Result<(), OsString> {
-    let ext = path.extension().unwrap_or_default().to_ascii_lowercase();
-    if ext != "esp" && ext != "esm" && ext != "json" && ext != "omwaddon" {
-        return Err(format!("\"{}\" (invalid file type).", path.display()).into());
+    // write TES3 data if applicable file extension
+    let ext = get_extension(output);
+    if matches!(&*ext, "esm" | "esp" | "omwaddon") {
+        return plugin.save_path(output);
     }
-    Ok(())
+
+    // otherwise default to outputting as JSON data
+    let contents = if minimize {
+        serde_json::to_string(&plugin)
+    } else {
+        serde_json::to_string_pretty(&plugin)
+    }
+    .map_err(io::Error::from)?;
+
+    if output.as_os_str().is_empty() {
+        // write to stdout if no file provided
+        io::stdout().write_all(contents.as_bytes())
+    } else {
+        // otherwise write into the given file
+        File::create(output)?.write_all(contents.as_bytes())
+    }
 }
 
 /// Parse the contents of the given path into a TES3 Plugin.
@@ -90,7 +96,7 @@ fn parse(path: &Path) -> io::Result<Plugin> {
 
     match raw_data.get(0) {
         // if it starts with a '{' assume it's a JSON file
-        Some(b'{') => plugin = serde_json::from_slice(&raw_data).unwrap(),
+        Some(b'{') => plugin = serde_json::from_slice(&raw_data).map_err(io::Error::from)?,
         // if it starts with a 'T' assume it's a TES3 file
         Some(b'T') => plugin.load_bytes(raw_data)?,
         // anything else is guaranteed to be invalid input
@@ -105,9 +111,9 @@ fn parse(path: &Path) -> io::Result<Plugin> {
 
 /// Make a backup file in case something goes wrong. "foo.json" -> "foo.001.json"
 fn backup(path: &Path) -> io::Result<u64> {
-    let ext = path.extension().unwrap().to_string_lossy();
+    let ext = get_extension(&path);
 
-    for i in 0..u16::MAX {
+    for i in 0..1000 {
         let backup_path = path.with_extension(format!("{:03}.{}", i, ext));
         if !backup_path.exists() {
             return std::fs::copy(path, backup_path);
@@ -117,30 +123,36 @@ fn backup(path: &Path) -> io::Result<u64> {
     Err(io::Error::new(io::ErrorKind::Other, "Failed to create backup."))
 }
 
-/// Convert the contents of input and write to output.
-/// The output format is inferred from the file extension.
-fn convert(input: &Path, output: &Path, minimize: bool, overwrite: bool) -> io::Result<()> {
-    let mut plugin = parse(input)?;
-
-    if !overwrite && output.exists() {
-        backup(output)?;
+/// Input can either be empty (to use stdin) or a JSON/TES3 file.
+fn validate_input_arg(arg: &OsStr) -> Result<(), OsString> {
+    if !arg.is_empty() {
+        let path = arg.as_ref();
+        validate_extension(path)?;
+        if !path.exists() {
+            return Err(format!("\"{}\" (file does not exist).", path.display()).into());
+        }
     }
+    Ok(())
+}
 
-    let ext = output.extension().unwrap_or_default().to_ascii_lowercase();
-    if ext == "esp" || ext == "esm" || ext == "omwaddon" {
-        return plugin.save_path(output);
+/// Output can either be empty (to use stdout) or a JSON/TES3 file.
+fn validate_output_arg(arg: &OsStr) -> Result<(), OsString> {
+    if !arg.is_empty() {
+        validate_extension(arg.as_ref())?;
     }
+    Ok(())
+}
 
-    match if minimize {
-        serde_json::to_string(&plugin)
-    } else {
-        serde_json::to_string_pretty(&plugin)
-    } {
-        // write to stdout if no file provided
-        Ok(s) if output.as_os_str().is_empty() => io::stdout().write_all(s.as_bytes()),
-        // otherwise write into the given file
-        Ok(s) => File::create(output)?.write_all(s.as_bytes()),
-        // convert serde errors into io errors
-        Err(e) => Err(io::Error::new(io::ErrorKind::InvalidData, format!("{}", e))),
+/// Verify that the given path has a JSON or TES3 extension.
+fn validate_extension(path: &Path) -> Result<(), OsString> {
+    let ext = get_extension(&path);
+    if matches!(&*ext, "esm" | "esp" | "json" | "omwaddon") {
+        return Ok(());
     }
+    Err(format!("\"{}\" (invalid file type).", path.display()).into())
+}
+
+/// Get a path's file extension as an ascii lowerecase string.
+fn get_extension(path: &Path) -> String {
+    path.extension().unwrap_or_default().to_string_lossy().to_ascii_lowercase()
 }
