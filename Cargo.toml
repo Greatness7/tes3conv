@@ -1,3 +1,5 @@
+cargo-features = ["strip"]
+
 [package]
 name = "tes3conv"
 version = "0.0.6"
@@ -8,6 +10,7 @@ edition = "2018"
 codegen-units = 1
 lto = "fat"
 panic = "abort"
+strip = "symbols"
 
 [dependencies]
 clap = "2.33.3"
