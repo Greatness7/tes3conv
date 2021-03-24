@@ -1,6 +1,6 @@
 [package]
 name = "tes3conv"
-version = "0.0.5"
+version = "0.0.6"
 authors = ["Greatness7 <Greatness7@gmail.com>"]
 edition = "2018"
 
