@@ -13,6 +13,7 @@ fn main() -> io::Result<()> {
         .version(crate_version!())
         .about("Convert TES3 plugins (.esp) into JSON files (.json), and vice-versa.")
         .usage("tes3conv \"test.esp\" \"test.json\"")
+        .setting(AppSettings::ArgRequiredElseHelp)
         .args(&[
             Arg::with_name("COMPACT")
                 .help("Compact json output (skip indentation).")
@@ -32,7 +33,6 @@ fn main() -> io::Result<()> {
                 .help("Sets the output file. Omit to use stdout.")
                 .validator_os(validate_output_arg)
         ])
-        .setting(AppSettings::ArgRequiredElseHelp)
         .get_matches();
 
     // optional args
@@ -151,7 +151,7 @@ fn validate_extension(path: &Path) -> Result<(), OsString> {
     Err(format!("\"{}\" (invalid file type).", path.display()).into())
 }
 
-/// Get a path's file extension as an ascii lowerecase string.
+/// Get a path's file extension as an ascii lowercase string.
 fn get_extension(path: &Path) -> String {
     path.extension().unwrap_or_default().to_string_lossy().to_ascii_lowercase()
 }
