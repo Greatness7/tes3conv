@@ -2,7 +2,7 @@ cargo-features = ["strip"]
 
 [package]
 name = "tes3conv"
-version = "0.0.6"
+version = "0.0.7"
 authors = ["Greatness7 <Greatness7@gmail.com>"]
 edition = "2018"
 

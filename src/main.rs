@@ -65,9 +65,9 @@ fn convert(input: &Path, output: &Path, compact: bool, overwrite: bool) -> io::R
 
     // otherwise default to outputting as JSON data
     let contents = if compact {
-        serde_json::to_string(&plugin)
+        serde_json::to_string(&plugin.objects)
     } else {
-        serde_json::to_string_pretty(&plugin)
+        serde_json::to_string_pretty(&plugin.objects)
     }
     .map_err(io::Error::from)?;
 
