@@ -1,5 +1,3 @@
-#![feature(osstring_ascii)]
-
 // rust std imports
 use std::ffi::{OsStr, OsString};
 use std::io::{self, Read, Write};
@@ -16,10 +14,10 @@ fn main() -> io::Result<()> {
         .about("Convert TES3 plugins (.esp) into JSON files (.json), and vice-versa.")
         .usage("tes3conv \"test.esp\" \"test.json\"")
         .args(&[
-            Arg::with_name("MINIMIZE")
-                .help("Minimize json output (skip indentation).")
-                .long("minimize")
-                .short("m")
+            Arg::with_name("COMPACT")
+                .help("Compact json output (skip indentation).")
+                .long("compact")
+                .short("c")
                 .takes_value(false),
             Arg::with_name("OVERWRITE")
                 .help("Overwrite output without making backups.")
@@ -38,7 +36,7 @@ fn main() -> io::Result<()> {
         .get_matches();
 
     // optional args
-    let minimize = args.is_present("MINIMIZE");
+    let compact = args.is_present("COMPACT");
     let overwrite = args.is_present("OVERWRITE");
 
     // required args
@@ -46,12 +44,12 @@ fn main() -> io::Result<()> {
     let output = args.value_of_os("OUTPUT").unwrap_or_default().as_ref();
 
     // do conversion
-    convert(input, output, minimize, overwrite)
+    convert(input, output, compact, overwrite)
 }
 
 /// Convert the contents of input and write to output.
 /// The output format is inferred from the file extension.
-fn convert(input: &Path, output: &Path, minimize: bool, overwrite: bool) -> io::Result<()> {
+fn convert(input: &Path, output: &Path, compact: bool, overwrite: bool) -> io::Result<()> {
     let mut plugin = parse(input)?;
 
     // create backups unless explicitly told not to
@@ -66,7 +64,7 @@ fn convert(input: &Path, output: &Path, minimize: bool, overwrite: bool) -> io::
     }
 
     // otherwise default to outputting as JSON data
-    let contents = if minimize {
+    let contents = if compact {
         serde_json::to_string(&plugin)
     } else {
         serde_json::to_string_pretty(&plugin)
