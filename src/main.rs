@@ -31,7 +31,7 @@ fn main() -> io::Result<()> {
                 .required(true),
             Arg::with_name("OUTPUT")
                 .help("Sets the output file. Omit to use stdout.")
-                .validator_os(validate_output_arg)
+                .validator_os(validate_output_arg),
         ])
         .get_matches();
 
@@ -94,12 +94,18 @@ fn parse(path: &Path) -> io::Result<Plugin> {
     let mut plugin = Plugin::new();
 
     match raw_data.get(0) {
-        // if it starts with a '{' assume it's a JSON file
-        Some(b'{') => plugin = serde_json::from_slice(&raw_data).map_err(io::Error::from)?,
-        // if it starts with a 'T' assume it's a TES3 file
-        Some(b'T') => plugin.load_bytes(raw_data)?,
-        // anything else is guaranteed to be invalid input
-        _ => return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid input.")),
+        Some(b'[') => {
+            // if it starts with a '[' assume it's a JSON file
+            plugin.objects = serde_json::from_slice(&raw_data).map_err(io::Error::from)?;
+        }
+        Some(b'T') => {
+            // if it starts with a 'T' assume it's a TES3 file
+            plugin.load_bytes(raw_data)?;
+        }
+        _ => {
+            // anything else is guaranteed to be invalid input
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid input."));
+        }
     }
 
     // sort objects so that diffs are a little more useful
