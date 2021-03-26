@@ -1,0 +1,82 @@
+<scriptlet>
+    <implements type="Automation" id="dispatcher">
+        <property name="PluginEvent">
+            <get/>
+        </property>
+        <property name="PluginDescription">
+            <get/>
+        </property>
+        <property name="PluginFileFilters">
+            <get/>
+        </property>
+        <property name="PluginIsAutomatic">
+            <get/>
+        </property>
+        <method name="UnpackFile"/>
+        <method name="PackFile"/>
+        <method name="IsFolder"/>
+        <method name="UnpackFolder"/>
+        <method name="PackFolder"/>
+        <method name="ShowSettingsDialog"/>
+    </implements>
+
+    <script language="VBS">
+        Option Explicit
+
+        Dim wsh: Set wsh = CreateObject("WScript.Shell")
+
+        Function get_PluginEvent()
+            get_PluginEvent = "FILE_FOLDER_PACK_UNPACK"
+        End Function
+
+        Function get_PluginDescription()
+            get_PluginDescription = "Display the TES3 contents as JSON"
+        End Function
+
+        Function get_PluginFileFilters()
+            get_PluginFileFilters = "\.[eE][sS][mpMP]$;\.omwaddon$"
+        End Function
+
+        Function get_PluginIsAutomatic()
+            get_PluginIsAutomatic = True
+        End Function
+
+        Function UnpackFile(fileSrc, fileDst, pbChanged, pSubcode)
+            const ShowWindow = 1
+            const DontShowWindow = 0
+            const WaitUntilFinished = True
+            const DontWaitUntilFinished = False
+
+            Dim cmd: cmd = "cmd /C tes3conv " & Quoted(fileSrc) & ">" & Quoted(fileDst)
+            wsh.Run cmd, DontShowWindow, WaitUntilFinished
+
+            pbChanged = True
+            pSubcode = 0
+            UnpackFile = True
+        End Function
+
+        Function PackFile(fileSrc, fileDst, pbChanged, pSubcode)
+            PackFile = False
+        End Function
+
+        Function IsFolder(file)
+            IsFolder = False
+        End Function
+
+        Function UnpackFolder(fileSrc, folderDst, pbChanged, pSubcode)
+            UnpackFolder = False
+        End Function
+
+        Function PackFolder(fileSrc, folderDst, pbChanged, pSubcode)
+            PackFolder = False
+        End Function
+
+        Function Quoted(str)
+            Quoted = """" & str & """"
+        End Function
+
+        Function ShowSettingsDialog()
+            ShowSettingsDialog = False
+        End Function
+    </script>
+</scriptlet>
