@@ -23,6 +23,11 @@
     <script language="VBS">
         Option Explicit
 
+        const ShowWindow = 1
+        const DontShowWindow = 0
+        const WaitUntilFinished = True
+        const DontWaitUntilFinished = False
+
         Dim wsh: Set wsh = CreateObject("WScript.Shell")
 
         Function get_PluginEvent()
@@ -42,12 +47,9 @@
         End Function
 
         Function UnpackFile(fileSrc, fileDst, pbChanged, pSubcode)
-            const ShowWindow = 1
-            const DontShowWindow = 0
-            const WaitUntilFinished = True
-            const DontWaitUntilFinished = False
+            Dim cmd
 
-            Dim cmd: cmd = "cmd /C tes3conv " & Quoted(fileSrc) & ">" & Quoted(fileDst)
+            cmd = "cmd /C tes3conv " & Quoted(fileSrc) & ">" & Quoted(fileDst)
             wsh.Run cmd, DontShowWindow, WaitUntilFinished
 
             pbChanged = True
@@ -56,7 +58,14 @@
         End Function
 
         Function PackFile(fileSrc, fileDst, pbChanged, pSubcode)
-            PackFile = False
+            Dim cmd
+
+            cmd = "cmd /C tes3conv " & Quoted(fileSrc) & " " & Quoted(fileDst)
+            wsh.Run cmd, DontShowWindow, WaitUntilFinished
+
+            pbChanged = True
+            pSubcode = 0
+            PackFile = True
         End Function
 
         Function IsFolder(file)

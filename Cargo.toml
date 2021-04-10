@@ -2,7 +2,7 @@ cargo-features = ["strip"]
 
 [package]
 name = "tes3conv"
-version = "0.0.8"
+version = "0.0.9"
 authors = ["Greatness7 <Greatness7@gmail.com>"]
 edition = "2018"
 
@@ -13,6 +13,6 @@ panic = "abort"
 strip = "symbols"
 
 [dependencies]
-clap = "2.33.3"
-es3 = { path = "libs/es3" }
-serde_json = "1.0.64"
+clap = "*"
+es3 = { path = "libs/es3", features = ["serde"] }
+serde_json = "*"

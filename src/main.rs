@@ -59,7 +59,7 @@ fn convert(input: &Path, output: &Path, compact: bool, overwrite: bool) -> io::R
 
     // write TES3 data if applicable file extension
     let ext = get_extension(output);
-    if matches!(&*ext, "esm" | "esp" | "omwaddon") {
+    if matches!(&*ext, "esm" | "esp" | "omwaddon" | "tmp") {
         return plugin.save_path(output);
     }
 
@@ -151,7 +151,7 @@ fn validate_output_arg(arg: &OsStr) -> Result<(), OsString> {
 /// Verify that the given path has a JSON or TES3 extension.
 fn validate_extension(path: &Path) -> Result<(), OsString> {
     let ext = get_extension(&path);
-    if matches!(&*ext, "esm" | "esp" | "json" | "omwaddon") {
+    if matches!(&*ext, "esm" | "esp" | "json" | "omwaddon" | "tmp") {
         return Ok(());
     }
     Err(format!("\"{}\" (invalid file type).", path.display()).into())
