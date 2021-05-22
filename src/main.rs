@@ -100,7 +100,7 @@ fn parse(path: &Path) -> io::Result<Plugin> {
         }
         Some(b'T') => {
             // if it starts with a 'T' assume it's a TES3 file
-            plugin.load_bytes(raw_data)?;
+            plugin.load_bytes(&raw_data)?;
         }
         _ => {
             // anything else is guaranteed to be invalid input
