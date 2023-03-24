@@ -1,50 +1,42 @@
 // rust std imports
-use std::ffi::{OsStr, OsString};
 use std::io::{self, Read, Write};
 use std::{fs::File, path::Path};
 
 // external imports
-use clap::{crate_name, crate_version};
-use clap::{App, AppSettings, Arg};
-use es3::esp::Plugin;
+use clap::Parser;
+use tes3::esp::Plugin;
+
+#[derive(Parser)]
+#[command(author, version)]
+#[command(about = "Convert TES3 plugins (.esp) into JSON files (.json), and vice-versa.", long_about = None)]
+struct Cli {
+    /// Compact json output (skip indentation).
+    #[arg(short, long)]
+    compact: bool,
+
+    /// "verwrite output without making backups.
+    #[arg(short, long)]
+    overwrite: bool,
+
+    /// Sets the input file. Pass - to use stdin.
+    #[arg(value_parser = validate_input_arg)]
+    input: String,
+
+    /// Sets the output file. Omit to use stdout.
+    #[arg(value_parser = validate_output_arg)]
+    output: String,
+}
 
 fn main() -> io::Result<()> {
-    let args = App::new(crate_name!())
-        .version(crate_version!())
-        .about("Convert TES3 plugins (.esp) into JSON files (.json), and vice-versa.")
-        .usage("tes3conv \"test.esp\" \"test.json\"")
-        .setting(AppSettings::ArgRequiredElseHelp)
-        .args(&[
-            Arg::with_name("COMPACT")
-                .help("Compact json output (skip indentation).")
-                .long("compact")
-                .short("c")
-                .takes_value(false),
-            Arg::with_name("OVERWRITE")
-                .help("Overwrite output without making backups.")
-                .long("overwrite")
-                .short("o")
-                .takes_value(false),
-            Arg::with_name("INPUT")
-                .help("Sets the input file. Pass - to use stdin.")
-                .validator_os(validate_input_arg)
-                .required(true),
-            Arg::with_name("OUTPUT")
-                .help("Sets the output file. Omit to use stdout.")
-                .validator_os(validate_output_arg),
-        ])
-        .get_matches();
-
-    // optional args
-    let compact = args.is_present("COMPACT");
-    let overwrite = args.is_present("OVERWRITE");
-
-    // required args
-    let input = args.value_of_os("INPUT").unwrap().as_ref();
-    let output = args.value_of_os("OUTPUT").unwrap_or_default().as_ref();
+    let cli = Cli::parse();
 
     // do conversion
-    convert(input, output, compact, overwrite)
+    convert(
+        Path::new(&cli.input),
+        Path::new(&cli.output),
+        cli.compact,
+        cli.overwrite,
+    )
 }
 
 /// Convert the contents of input and write to output.
@@ -64,9 +56,15 @@ fn convert(input: &Path, output: &Path, compact: bool, overwrite: bool) -> io::R
     }
 
     // otherwise default to outputting as JSON data
+    //let mut w = io::BufWriter::new(Vec::new());
+
     let contents = if compact {
+        //let mut s = serde_json::Serializer::new(&mut w);
+        //TES3ObjectDef::serialize(&plugin.objects[0], &mut s)?;
         serde_json::to_string(&plugin.objects)
     } else {
+        //let mut s = serde_json::Serializer::pretty(&mut w);
+        //TES3ObjectDef::serialize(&plugin.objects[0], &mut s)?;
         serde_json::to_string_pretty(&plugin.objects)
     }
     .map_err(io::Error::from)?;
@@ -93,7 +91,7 @@ fn parse(path: &Path) -> io::Result<Plugin> {
 
     let mut plugin = Plugin::new();
 
-    match raw_data.get(0) {
+    match raw_data.first() {
         Some(b'[') => {
             // if it starts with a '[' assume it's a JSON file
             plugin.objects = serde_json::from_slice(&raw_data).map_err(io::Error::from)?;
@@ -109,14 +107,14 @@ fn parse(path: &Path) -> io::Result<Plugin> {
     }
 
     // sort objects so that diffs are a little more useful
-    plugin.sort();
+    plugin.sort_objects();
 
     Ok(plugin)
 }
 
 /// Make a backup file in case something goes wrong. "foo.json" -> "foo.001.json"
 fn backup(path: &Path) -> io::Result<u64> {
-    let ext = get_extension(&path);
+    let ext = get_extension(path);
 
     for i in 0..1000 {
         let backup_path = path.with_extension(format!("{:03}.{}", i, ext));
@@ -125,39 +123,45 @@ fn backup(path: &Path) -> io::Result<u64> {
         }
     }
 
-    Err(io::Error::new(io::ErrorKind::Other, "Failed to create backup."))
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "Failed to create backup.",
+    ))
 }
 
 /// Input can either be "-" (to use stdin) or a JSON/TES3 file.
-fn validate_input_arg(arg: &OsStr) -> Result<(), OsString> {
+fn validate_input_arg(arg: &str) -> Result<String, String> {
     if arg != "-" {
         let path = arg.as_ref();
         validate_extension(path)?;
         if !path.exists() {
-            return Err(format!("\"{}\" (file does not exist).", path.display()).into());
+            return Err(format!("\"{}\" (file does not exist).", path.display()));
         }
     }
-    Ok(())
+    Ok(arg.to_owned())
 }
 
 /// Output can either be empty (to use stdout) or a JSON/TES3 file.
-fn validate_output_arg(arg: &OsStr) -> Result<(), OsString> {
+fn validate_output_arg(arg: &str) -> Result<String, String> {
     if !arg.is_empty() {
         validate_extension(arg.as_ref())?;
     }
-    Ok(())
+    Ok(arg.to_owned())
 }
 
 /// Verify that the given path has a JSON or TES3 extension.
-fn validate_extension(path: &Path) -> Result<(), OsString> {
-    let ext = get_extension(&path);
+fn validate_extension(path: &Path) -> Result<(), String> {
+    let ext = get_extension(path);
     if matches!(&*ext, "esm" | "esp" | "json" | "omwaddon" | "tmp") {
         return Ok(());
     }
-    Err(format!("\"{}\" (invalid file type).", path.display()).into())
+    Err(format!("\"{}\" (invalid file type).", path.display()))
 }
 
 /// Get a path's file extension as an ascii lowercase string.
 fn get_extension(path: &Path) -> String {
-    path.extension().unwrap_or_default().to_string_lossy().to_ascii_lowercase()
+    path.extension()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_ascii_lowercase()
 }
