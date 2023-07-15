@@ -1,7 +1,6 @@
 // rust std imports
-use std::fs::File;
 use std::io::{self, Read, Write};
-use std::path::{Path, PathBuf};
+use std::{fs::File, path::Path};
 
 // external imports
 use clap::{Arg, ArgAction, Command};
@@ -28,10 +27,14 @@ fn main() -> io::Result<()> {
                 .action(ArgAction::SetTrue),
             Arg::new("INPUT")
                 .help("Sets the input file. Pass - to use stdin.")
-                .value_parser(validate_input_arg),
+                .value_parser(validate_input_arg)
+                .required(true),
             Arg::new("OUTPUT")
                 .help("Sets the output file. Omit to use stdout.")
-                .value_parser(validate_output_arg),
+                .value_parser(validate_output_arg)
+                .required(false)
+                .default_value("")
+                .hide_default_value(true),
         ])
         .get_matches();
 
@@ -40,8 +43,8 @@ fn main() -> io::Result<()> {
     let overwrite = args.get_flag("OVERWRITE");
 
     // required args
-    let input = args.get_one("INPUT").unwrap();
-    let output = args.get_one("OUTPUT").unwrap();
+    let input = args.get_one::<String>("INPUT").unwrap().as_ref();
+    let output = args.get_one::<String>("OUTPUT").unwrap().as_ref();
 
     // do conversion
     convert(input, output, compact, overwrite)
@@ -49,7 +52,7 @@ fn main() -> io::Result<()> {
 
 /// Convert the contents of input and write to output.
 /// The output format is inferred from the file extension.
-fn convert(input: &PathBuf, output: &PathBuf, compact: bool, overwrite: bool) -> io::Result<()> {
+fn convert(input: &Path, output: &Path, compact: bool, overwrite: bool) -> io::Result<()> {
     let mut plugin = parse(input)?;
 
     // create backups unless explicitly told not to
@@ -132,7 +135,7 @@ fn backup(path: &Path) -> io::Result<u64> {
 }
 
 /// Input can either be "-" (to use stdin) or a JSON/TES3 file.
-fn validate_input_arg(arg: &str) -> Result<PathBuf, String> {
+fn validate_input_arg(arg: &str) -> Result<String, String> {
     if arg != "-" {
         let path = arg.as_ref();
         validate_extension(path)?;
@@ -144,7 +147,7 @@ fn validate_input_arg(arg: &str) -> Result<PathBuf, String> {
 }
 
 /// Output can either be empty (to use stdout) or a JSON/TES3 file.
-fn validate_output_arg(arg: &str) -> Result<PathBuf, String> {
+fn validate_output_arg(arg: &str) -> Result<String, String> {
     if !arg.is_empty() {
         validate_extension(arg.as_ref())?;
     }
