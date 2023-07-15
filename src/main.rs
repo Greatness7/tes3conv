@@ -1,47 +1,47 @@
 // rust std imports
-use std::ffi::{OsStr, OsString};
+use std::fs::File;
 use std::io::{self, Read, Write};
-use std::{fs::File, path::Path};
+use std::path::{Path, PathBuf};
 
 // external imports
-use clap::{crate_name, crate_version};
-use clap::{App, AppSettings, Arg};
-use es3::esp::Plugin;
+use clap::{Arg, ArgAction, Command};
+use tes3::esp::Plugin;
+
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn main() -> io::Result<()> {
-    let args = App::new(crate_name!())
-        .version(crate_version!())
+    let args = Command::new("tes3conv")
         .about("Convert TES3 plugins (.esp) into JSON files (.json), and vice-versa.")
-        .usage("tes3conv \"test.esp\" \"test.json\"")
-        .setting(AppSettings::ArgRequiredElseHelp)
+        .override_usage("tes3conv \"test.esp\" \"test.json\"")
+        .arg_required_else_help(true)
         .args(&[
-            Arg::with_name("COMPACT")
+            Arg::new("COMPACT")
                 .help("Compact json output (skip indentation).")
                 .long("compact")
-                .short("c")
-                .takes_value(false),
-            Arg::with_name("OVERWRITE")
+                .short('c')
+                .action(ArgAction::SetTrue),
+            Arg::new("OVERWRITE")
                 .help("Overwrite output without making backups.")
                 .long("overwrite")
-                .short("o")
-                .takes_value(false),
-            Arg::with_name("INPUT")
+                .short('o')
+                .action(ArgAction::SetTrue),
+            Arg::new("INPUT")
                 .help("Sets the input file. Pass - to use stdin.")
-                .validator_os(validate_input_arg)
-                .required(true),
-            Arg::with_name("OUTPUT")
+                .value_parser(validate_input_arg),
+            Arg::new("OUTPUT")
                 .help("Sets the output file. Omit to use stdout.")
-                .validator_os(validate_output_arg),
+                .value_parser(validate_output_arg),
         ])
         .get_matches();
 
     // optional args
-    let compact = args.is_present("COMPACT");
-    let overwrite = args.is_present("OVERWRITE");
+    let compact = args.get_flag("COMPACT");
+    let overwrite = args.get_flag("OVERWRITE");
 
     // required args
-    let input = args.value_of_os("INPUT").unwrap().as_ref();
-    let output = args.value_of_os("OUTPUT").unwrap_or_default().as_ref();
+    let input = args.get_one("INPUT").unwrap();
+    let output = args.get_one("OUTPUT").unwrap();
 
     // do conversion
     convert(input, output, compact, overwrite)
@@ -49,7 +49,7 @@ fn main() -> io::Result<()> {
 
 /// Convert the contents of input and write to output.
 /// The output format is inferred from the file extension.
-fn convert(input: &Path, output: &Path, compact: bool, overwrite: bool) -> io::Result<()> {
+fn convert(input: &PathBuf, output: &PathBuf, compact: bool, overwrite: bool) -> io::Result<()> {
     let mut plugin = parse(input)?;
 
     // create backups unless explicitly told not to
@@ -93,7 +93,7 @@ fn parse(path: &Path) -> io::Result<Plugin> {
 
     let mut plugin = Plugin::new();
 
-    match raw_data.get(0) {
+    match raw_data.first() {
         Some(b'[') => {
             // if it starts with a '[' assume it's a JSON file
             plugin.objects = serde_json::from_slice(&raw_data).map_err(io::Error::from)?;
@@ -109,55 +109,61 @@ fn parse(path: &Path) -> io::Result<Plugin> {
     }
 
     // sort objects so that diffs are a little more useful
-    plugin.sort();
+    plugin.sort_objects();
 
     Ok(plugin)
 }
 
 /// Make a backup file in case something goes wrong. "foo.json" -> "foo.001.json"
 fn backup(path: &Path) -> io::Result<u64> {
-    let ext = get_extension(&path);
+    let ext = get_extension(path);
 
     for i in 0..1000 {
-        let backup_path = path.with_extension(format!("{:03}.{}", i, ext));
+        let backup_path = path.with_extension(format!("{i:03}.{ext}"));
         if !backup_path.exists() {
             return std::fs::copy(path, backup_path);
         }
     }
 
-    Err(io::Error::new(io::ErrorKind::Other, "Failed to create backup."))
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "Failed to create backup.",
+    ))
 }
 
 /// Input can either be "-" (to use stdin) or a JSON/TES3 file.
-fn validate_input_arg(arg: &OsStr) -> Result<(), OsString> {
+fn validate_input_arg(arg: &str) -> Result<PathBuf, String> {
     if arg != "-" {
         let path = arg.as_ref();
         validate_extension(path)?;
         if !path.exists() {
-            return Err(format!("\"{}\" (file does not exist).", path.display()).into());
+            return Err(format!("\"{}\" (file does not exist).", path.display()));
         }
     }
-    Ok(())
+    Ok(arg.into())
 }
 
 /// Output can either be empty (to use stdout) or a JSON/TES3 file.
-fn validate_output_arg(arg: &OsStr) -> Result<(), OsString> {
+fn validate_output_arg(arg: &str) -> Result<PathBuf, String> {
     if !arg.is_empty() {
         validate_extension(arg.as_ref())?;
     }
-    Ok(())
+    Ok(arg.into())
 }
 
 /// Verify that the given path has a JSON or TES3 extension.
-fn validate_extension(path: &Path) -> Result<(), OsString> {
-    let ext = get_extension(&path);
+fn validate_extension(path: &Path) -> Result<(), String> {
+    let ext = get_extension(path);
     if matches!(&*ext, "esm" | "esp" | "json" | "omwaddon" | "tmp") {
         return Ok(());
     }
-    Err(format!("\"{}\" (invalid file type).", path.display()).into())
+    Err(format!("\"{}\" (invalid file type).", path.display()))
 }
 
 /// Get a path's file extension as an ascii lowercase string.
 fn get_extension(path: &Path) -> String {
-    path.extension().unwrap_or_default().to_string_lossy().to_ascii_lowercase()
+    path.extension()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_ascii_lowercase()
 }

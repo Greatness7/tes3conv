@@ -1,4 +1,0 @@
-[submodule "libs/es3"]
-	path = libs/es3
-	url = https://github.com/Greatness7/es3_rust.git
-	branch = master
