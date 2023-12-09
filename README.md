@@ -5,21 +5,18 @@ Get the latest version from the [releases](https://github.com/Greatness7/tes3con
 A simple command-line tool that lets you convert TES3 plugin files (`.esp`) into JSON files (`.json`), and vice-versa.
 
 ```
-tes3conv 0.0.6
 Convert TES3 plugins (.esp) into JSON files (.json), and vice-versa.
 
-USAGE:
-    tes3conv "test.esp" "test.json"
+Usage: tes3conv "test.esp" "test.json"
 
-FLAGS:
-    -c, --compact      Compact json output (skip indentation).
-    -o, --overwrite    Overwrite output without making backups.
-    -h, --help         Prints help information
-    -V, --version      Prints version information
+Arguments:
+  <INPUT>   Sets the input file. Pass - to use stdin.
+  [OUTPUT]  Sets the output file. Omit to use stdout.
 
-ARGS:
-    <INPUT>     Sets the input file. Pass - to use stdin.
-    <OUTPUT>    Sets the output file. Omit to use stdout.
+Options:
+  -c, --compact    Compact json output (skip indentation).
+  -o, --overwrite  Overwrite output without making backups.
+  -h, --help       Print help
 ```
 
 ---
