@@ -21,6 +21,6 @@ features = ["std", "help", "usage", "suggestions"]
 
 [dependencies.tes3]
 git = "https://github.com/Greatness7/tes3"
-branch = "dev"
+rev = "2aced3dd3a1c7e7f35c07b0db5ae646c44a5d819"
 default-features = false
 features = ["esp", "nightly", "simd", "serde"]
