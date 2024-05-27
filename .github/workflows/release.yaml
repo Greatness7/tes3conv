@@ -37,7 +37,7 @@ jobs:
         run: cargo build --release
 
       - name: compress
-        run: tar -acf ${{ matrix.archive }} -C ./target/release/ ${{ matrix.binary }}
+        run: 7z a -tzip ${{matrix.archive}} ./target/release/${{matrix.binary}}
 
       - name: upload
         uses: softprops/action-gh-release@v1
