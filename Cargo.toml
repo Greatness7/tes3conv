@@ -1,6 +1,6 @@
 [package]
 name = "tes3conv"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Greatness7 <Greatness7@gmail.com>"]
 edition = "2021"
 
@@ -20,7 +20,8 @@ default-features = false
 features = ["std", "help", "usage", "suggestions"]
 
 [dependencies.tes3]
+# path = "../tes3/"
 git = "https://github.com/Greatness7/tes3"
-rev = "161d7841c3458c12c7fe9b046cf4ab650b096df9"
+rev = "36fdeb6269bf7c676ad169c1d57db8539f16e336"
 default-features = false
 features = ["esp", "nightly", "simd", "serde"]
