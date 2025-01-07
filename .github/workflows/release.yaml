@@ -17,11 +17,14 @@ jobs:
     needs: setup
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, macos-13, ubuntu-latest, windows-latest]
         include:
           - os: macos-latest
             binary: tes3conv
-            archive: macos-latest.zip
+            archive: macos-latest-arm64.zip
+          - os: macos-13
+            binary: tes3conv
+            archive: macos-13-x86_64.zip
           - os: ubuntu-latest
             binary: tes3conv
             archive: ubuntu-latest.zip
