@@ -11,7 +11,6 @@ panic = "abort"
 strip = "symbols"
 
 [dependencies]
-mimalloc = { version = "^0.1", default-features = false }
 serde_json = "^1.0"
 
 [dependencies.clap]
@@ -20,8 +19,13 @@ default-features = false
 features = ["std", "help", "usage", "suggestions"]
 
 [dependencies.tes3]
-# path = "../tes3/"
 git = "https://github.com/Greatness7/tes3"
-rev = "95cbc2cad2c574b023da879e308d3f6f6c4c3e04"
+rev = "51fae82b79838d76a39d0d1d0d472d7f48e8577f"
+# path = "../tes3/"
 default-features = false
-features = ["esp", "nightly", "simd", "serde"]
+features = ["esp", "serde", "serde-zstd"]
+
+[dependencies.mimalloc]
+git = "https://github.com/purpleprotocol/mimalloc_rust.git"
+rev = "eff21096d5ee5337ec89e2b7174f1bbb11026c70"
+default-features = false
